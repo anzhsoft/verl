@@ -28,9 +28,9 @@ from verl.checkpoint_engine import CheckpointEngineManager
 from verl.experimental.fully_async_policy.detach_utils import (
     MetricsAggregator,
     assemble_batch_from_rollout_samples,
+    format_rollout_error_signal,
 )
 from verl.experimental.fully_async_policy.message_queue import MessageQueueClient
-from verl.experimental.fully_async_policy.rollout_failure import raise_for_rollout_error_signal
 from verl.experimental.separation.ray_trainer import SeparateRayPPOTrainer
 from verl.single_controller.ray import RayClassWithInitArgs, RayWorkerGroup
 from verl.trainer.ppo import core_algos
@@ -292,7 +292,10 @@ class FullyAsyncTrainer(SeparateRayPPOTrainer):
             # Get a single sample and wait until there is a sample or None is received
             sample, queue_len = await self.message_queue_client.get_sample()
 
-            raise_for_rollout_error_signal(sample)
+            rollout_error_message = format_rollout_error_signal(sample)
+            if rollout_error_message is not None:
+                print(f"[FullyAsyncTrainer] {rollout_error_message}")
+                return None, None
 
             if sample is None:
                 print(

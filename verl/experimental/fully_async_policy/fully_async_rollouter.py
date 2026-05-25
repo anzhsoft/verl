@@ -26,16 +26,14 @@ from omegaconf import DictConfig
 
 from verl.experimental.agent_loop.agent_loop import AgentLoopManager
 from verl.experimental.fully_async_policy.detach_utils import (
+    RolloutErrorSignal,
     RolloutSample,
+    first_unexpected_asyncio_exception,
     prepare_single_generation_data,
     safe_create_task,
-)
-from verl.experimental.fully_async_policy.message_queue import MessageQueueClient
-from verl.experimental.fully_async_policy.rollout_failure import (
-    RolloutErrorSignal,
-    first_unexpected_asyncio_exception,
     wait_for_task_failure_or_completion,
 )
+from verl.experimental.fully_async_policy.message_queue import MessageQueueClient
 from verl.experimental.separation.ray_trainer import SeparateRayPPOTrainer
 from verl.protocol import DataProto
 from verl.single_controller.ray import RayResourcePool, RayWorkerGroup, ResourcePoolManager
@@ -1045,9 +1043,7 @@ class FullyAsyncRollouter(SeparateRayPPOTrainer):
         finally:
             if task_failure is not None and not generation_task.done():
                 try:
-                    await self.message_queue_client.put_sample(
-                        sample=RolloutErrorSignal.from_exception(task_failure)
-                    )
+                    await self.message_queue_client.put_sample(sample=RolloutErrorSignal.from_exception(task_failure))
                 except Exception as signal_error:
                     print(f"[FullyAsyncRollouter] Failed to publish rollout error signal: {signal_error}")
 

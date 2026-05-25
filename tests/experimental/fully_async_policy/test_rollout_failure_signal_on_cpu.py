@@ -16,10 +16,10 @@ import asyncio
 
 import pytest
 
-from verl.experimental.fully_async_policy.rollout_failure import (
+from verl.experimental.fully_async_policy.detach_utils import (
     RolloutErrorSignal,
     first_unexpected_asyncio_exception,
-    raise_for_rollout_error_signal,
+    format_rollout_error_signal,
     wait_for_task_failure_or_completion,
 )
 
@@ -35,15 +35,17 @@ def test_rollout_error_signal_from_exception_preserves_error_details():
     assert "RuntimeError: injected rollout failure" in signal.traceback
 
 
-def test_trainer_raises_on_rollout_error_signal():
+def test_rollout_error_signal_formats_error_details():
     signal = RolloutErrorSignal(
         error_type="RuntimeError",
         message="injected rollout failure",
         traceback="Traceback details",
     )
 
-    with pytest.raises(RuntimeError, match="Rollout generation failed: RuntimeError: injected rollout failure"):
-        raise_for_rollout_error_signal(signal)
+    message = format_rollout_error_signal(signal)
+
+    assert message == "Rollout generation failed: RuntimeError: injected rollout failure\nTraceback details"
+    assert format_rollout_error_signal(object()) is None
 
 
 def test_asyncio_exception_filter_ignores_cancellations():
